@@ -8,6 +8,11 @@ const vm = require("vm");
 const projectPath =
   "/Users/i824749/Documents/01_Projects/03_CAAS/spartacus_2023_July/spartacus/";
 
+/**
+ * Convert TypeScript files within a directory to JSON files
+ * @param string directoryPath: root directory of project
+ * @param string targetPath: location of target file e.g. "/translations/en"
+ */
 function convertTsToJson(directoryPath, targetPath) {
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
@@ -35,9 +40,11 @@ function convertTsToJson(directoryPath, targetPath) {
                   const variablesObject = loadObjectsFromFile(
                     filePath + "/" + subFile
                   );
+                  // If there are loaded objects, merge and convert to JSON
                   if (variablesObject.length > 0) {
                     const mergedObject = mergeVariables(variablesObject);
                     const jsonStr = JSON.stringify(mergedObject, null, 2);
+                    // Write JSON string to a new JSON file
                     fs.writeFileSync(
                       "json/" + replaceFileExtension(subFile, "json"),
                       jsonStr
@@ -211,8 +218,7 @@ function loadObjectsFromFile(filePath) {
   });
 }
 
-// ----------------------------------------------------------------
-// START PUBLIC
+// START
 
 if (fs.existsSync("json")) {
   fs.rmdirSync("json", { recursive: true });
