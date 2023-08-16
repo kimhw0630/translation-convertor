@@ -1,0 +1,16 @@
+{
+  "productImageZoomTrigger": {
+    "expand": "Expand image"
+  },
+  "productImageZoomDialog": {
+    "close": "Close"
+  },
+  "productImageZoom": {
+    "productImageZoomTrigger": {
+      "expand": "Expand image"
+    },
+    "productImageZoomDialog": {
+      "close": "Close"
+    }
+  }
+}

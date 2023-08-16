@@ -201,12 +201,8 @@ function loadObjectsFromFile(filePath) {
   const sandbox = {};
   vm.runInNewContext(jsCode, sandbox, { filename: filePath });
 
-  let resultList = [];
-  if (importStatements.length > 0) {
-    resultList = orgVariableDeclarations;
-  } else {
-    resultList = sortedVariables;
-  }
+  const resultList =
+    importStatements.length > 0 ? orgVariableDeclarations : sortedVariables;
 
   // Return an array of objects with variable names and their corresponding values
   return resultList.map((variable) => {
@@ -219,14 +215,14 @@ function loadObjectsFromFile(filePath) {
 }
 
 // START
-
+// delete all json files then start
 if (fs.existsSync("json")) {
   fs.rmdirSync("json", { recursive: true });
 }
 fs.mkdirSync("json", { recursive: true });
 
-// path to check
-const checkPaths = ["feature-libs", "integration-libs", "projects"];
+// path to check: look for translation files in below pathes
+const checkPathes = ["feature-libs", "integration-libs", "projects"];
 // path where resource files are located
 const targetPath = "/translations/en";
 
@@ -235,9 +231,9 @@ fs.access(projectPath, fs.constants.F_OK, (err) => {
     console.error(`Folder does not exist: ${folderPath}`);
   } else {
     // Iterate through each checkPath
-    for (const pathSegment of checkPaths) {
-      const fullPath = `${projectPath}${pathSegment}`;
-      convertTsToJson(fullPath, targetPath);
+    for (const pathSegment of checkPathes) {
+      const checkPath = `${projectPath}${pathSegment}`;
+      convertTsToJson(checkPath, targetPath);
     }
   }
 });

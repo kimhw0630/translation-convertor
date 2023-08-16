@@ -1,0 +1,14 @@
+{
+  "bulkPricingTable": {
+    "quantity": "Quantity",
+    "price": "Price",
+    "discount": "Discount"
+  },
+  "bulkPricing": {
+    "bulkPricingTable": {
+      "quantity": "Quantity",
+      "price": "Price",
+      "discount": "Discount"
+    }
+  }
+}
