@@ -1,10 +1,8 @@
 {
-  "cdc": {
-    "reconsent": {
-      "dialog": {
-        "title": "Profile Completion",
-        "description": "We still need your consent for the following"
-      }
+  "reconsent": {
+    "dialog": {
+      "title": "Profile Completion",
+      "description": "We still need your consent for the following"
     }
   }
 }

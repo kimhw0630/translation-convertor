@@ -1,7 +1,5 @@
 {
-  "video": {
-    "player": {
-      "label": "Video Player"
-    }
+  "player": {
+    "label": "Video Player"
   }
 }

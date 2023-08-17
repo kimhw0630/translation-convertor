@@ -1,22 +1,23 @@
-"use strict";
-const fs = require("fs");
-const path = require("path");
-const ts = require("typescript");
-const vm = require("vm");
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const ts = require('typescript');
+const vm = require('vm');
 
 // project Path
 const projectPath =
-  "/Users/i824749/Documents/01_Projects/03_CAAS/spartacus_2023_July/spartacus/";
+  '/Users/i824749/Documents/01_Projects/03_CAAS/spartacus_2023_July/spartacus/';
 
 /**
  * Convert TypeScript files within a directory to JSON files
  * @param string directoryPath: root directory of project
  * @param string targetPath: location of target file e.g. "/translations/en"
+ * @param boolean useIndexFile: whether use index.ts file to get resource files"
  */
-function convertTsToJson(directoryPath, targetPath) {
+function convertTsToJson(directoryPath, targetPath, useIndexFile) {
   fs.readdir(directoryPath, (err, files) => {
     if (err) {
-      console.error("Error reading directory:", err);
+      console.error('Error reading directory:', err);
       return;
     }
     // Process each file and directory within the directory
@@ -24,29 +25,54 @@ function convertTsToJson(directoryPath, targetPath) {
       const filePath = path.join(directoryPath, file);
       fs.stat(filePath, (err, stats) => {
         if (err) {
-          console.error("Error checking file stats:", err);
+          console.error('Error checking file stats:', err);
           return;
         }
         if (stats.isDirectory()) {
           if (filePath.endsWith(targetPath)) {
             fs.readdir(filePath, (err, subFiles) => {
               if (err) {
-                console.error("Error reading sub-directory:", err);
+                console.error('Error reading sub-directory:', err);
                 return;
               }
               subFiles.forEach((subFile) => {
-                // Skip files named "index.ts"
-                if (subFile !== "index.ts") {
+                if (subFile === 'index.ts' && useIndexFile) {
+                  const translationInfo = extractTranslationInfo(
+                    filePath + '/' + subFile
+                  );
                   const variablesObject = loadObjectsFromFile(
-                    filePath + "/" + subFile
+                    filePath + '/' + translationInfo.importedFileName
+                  );
+                  // Find the object with matching name
+                  const selectedObject = variablesObject.find(
+                    (obj) => obj.name === translationInfo.enObject
+                  );
+
+                  const jsonStr = JSON.stringify(selectedObject.value, null, 2);
+                  fs.writeFileSync(
+                    'json/' +
+                      replaceFileExtension(
+                        translationInfo.importedFileName,
+                        'json'
+                      ),
+                    jsonStr
+                  );
+                }
+                if (subFile !== 'index.ts' && !useIndexFile) {
+                  // console.log(subFile);
+                  const variablesObject = loadObjectsFromFile(
+                    filePath + '/' + subFile
                   );
                   // If there are loaded objects, merge and convert to JSON
                   if (variablesObject.length > 0) {
-                    const mergedObject = mergeVariables(variablesObject);
-                    const jsonStr = JSON.stringify(mergedObject, null, 2);
+                    const jsonStr = JSON.stringify(
+                      variablesObject[0].value,
+                      null,
+                      2
+                    );
                     // Write JSON string to a new JSON file
                     fs.writeFileSync(
-                      "json/" + replaceFileExtension(subFile, "json"),
+                      'json/' + replaceFileExtension(subFile, 'json'),
                       jsonStr
                     );
                   }
@@ -54,7 +80,7 @@ function convertTsToJson(directoryPath, targetPath) {
               });
             });
           } else {
-            convertTsToJson(filePath, targetPath);
+            convertTsToJson(filePath, targetPath, useIndexFile);
           }
         }
       });
@@ -63,34 +89,13 @@ function convertTsToJson(directoryPath, targetPath) {
 }
 
 /**
- * takes an array of objects with name and value properties, and merges them into a single object
- */
-function mergeVariables(variablesObject) {
-  function createObject(name, value) {
-    const obj = {};
-    obj[name] = value;
-    return obj;
-  }
-
-  const objects = variablesObject.map(({ name, value }) =>
-    createObject(name, value)
-  );
-
-  const mergedObject = objects.reduce((result, obj) => {
-    return { ...result, ...obj };
-  }, {});
-
-  return mergedObject;
-}
-
-/**
  * replaces the file extension of a given file name with a new extension
  */
 function replaceFileExtension(fileName, newExtension) {
-  const parts = fileName.split(".");
+  const parts = fileName.split('.');
   if (parts.length > 1) {
     parts[parts.length - 1] = newExtension;
-    return parts.join(".");
+    return parts.join('.');
   }
   return fileName;
 }
@@ -101,7 +106,7 @@ function replaceFileExtension(fileName, newExtension) {
  * returns an array of objects containing variable names and their values.
  */
 function loadObjectsFromFile(filePath) {
-  const fileContents = fs.readFileSync(filePath, "utf-8");
+  const fileContents = fs.readFileSync(filePath, 'utf-8');
   let sourceFile = ts.createSourceFile(
     filePath,
     fileContents,
@@ -113,7 +118,7 @@ function loadObjectsFromFile(filePath) {
   const orgVariableDeclarations = [];
   sourceFile.statements.forEach((node) => {
     if (ts.isImportDeclaration(node)) {
-      importStatements.push(node.getText());
+      importStatements.push(node);
     }
   });
 
@@ -129,24 +134,23 @@ function loadObjectsFromFile(filePath) {
     ts.forEachChild(sourceFile, visitforCheck);
 
     const importedFileContents = [];
-    const lastSlashIndex = filePath.lastIndexOf("/");
-    const rootPath = filePath.substring(0, lastSlashIndex) + "/";
+    const lastSlashIndex = filePath.lastIndexOf('/');
+    const rootPath = filePath.substring(0, lastSlashIndex) + '/';
 
     // read and save imported file contents
     importStatements.forEach((importStatement) => {
       // Extract the imported file path from the import statement
-      const matches = importStatement.match(/from ['"](.*)['"]/);
-      if (matches && matches[1]) {
-        const importedFilePath =
-          rootPath + matches[1].replace(/\.\//, "") + ".ts";
-        const importedFileContent = fs.readFileSync(importedFilePath, "utf-8");
-        importedFileContents.push(importedFileContent);
-      }
+      const importFile = getImportedFileName(importStatement);
+      const importedFileContent = fs.readFileSync(
+        rootPath + importFile,
+        'utf-8'
+      );
+      importedFileContents.push(importedFileContent);
     });
     // merge imported file contents with original file content
     const mergedSourceFile = ts.createSourceFile(
       filePath,
-      importedFileContents.join("\n") + "\n" + fileContents,
+      importedFileContents.join('\n') + '\n' + fileContents,
       ts.ScriptTarget.ESNext,
       true
     );
@@ -196,7 +200,7 @@ function loadObjectsFromFile(filePath) {
       const node = objectNodes.find((node) => node.name.getText() === variable);
       return printer.printNode(ts.EmitHint.Unspecified, node, sourceFile);
     })
-    .join("\n");
+    .join('\n');
 
   const sandbox = {};
   vm.runInNewContext(jsCode, sandbox, { filename: filePath });
@@ -214,17 +218,73 @@ function loadObjectsFromFile(filePath) {
   });
 }
 
+/**
+ * // extracts translation information from index.ts file.
+ * @param string tsFilePath
+ * @returns
+ */
+function extractTranslationInfo(tsFilePath) {
+  // Read the TS file content
+  const tsFileContent = fs.readFileSync(tsFilePath, 'utf-8');
+
+  // Parse the TypeScript source
+  const sourceFile = ts.createSourceFile(
+    tsFilePath,
+    tsFileContent,
+    ts.ScriptTarget.Latest,
+    true
+  );
+
+  let importedFileName = '';
+  let enObjectValue = '';
+  // Recursive function to traverse the AST and extract "en" object value.
+  function visitforCheck(node) {
+    if (ts.isVariableDeclaration(node)) {
+      if (node.name.text === 'en') {
+        enObjectValue = node.initializer.getText();
+        const pattern = /\b\w+\b/;
+        const match = enObjectValue.match(pattern);
+        enObjectValue = match ? match[0] : null;
+      }
+    }
+    ts.forEachChild(node, visitforCheck);
+  }
+
+  // Traverse the AST to find import statements and "en" object assignment
+  ts.forEachChild(sourceFile, (node) => {
+    if (ts.isImportDeclaration(node)) {
+      importedFileName = getImportedFileName(node);
+    }
+    ts.forEachChild(node, visitforCheck);
+  });
+
+  return {
+    importedFileName: importedFileName,
+    enObject: enObjectValue,
+  };
+}
+
+function getImportedFileName(node) {
+  let importedFileName = '';
+  const matches = node.getText().match(/from ['"](.*)['"]/);
+  if (matches && matches[1]) {
+    importedFileName = matches[1].replace(/\.\//, '') + '.ts';
+    importedFileName = importedFileName.replace('.json', ''); // in case when we modified to test index file
+  }
+  return importedFileName;
+}
+
 // START
 // delete all json files then start
-if (fs.existsSync("json")) {
-  fs.rmdirSync("json", { recursive: true });
+if (fs.existsSync('json')) {
+  fs.rmdirSync('json', { recursive: true });
 }
-fs.mkdirSync("json", { recursive: true });
+fs.mkdirSync('json', { recursive: true });
 
 // path to check: look for translation files in below pathes
-const checkPathes = ["feature-libs", "integration-libs", "projects"];
+const checkPathes = ['feature-libs', 'integration-libs', 'projects'];
 // path where resource files are located
-const targetPath = "/translations/en";
+const targetPath = '/translations/en';
 
 fs.access(projectPath, fs.constants.F_OK, (err) => {
   if (err) {
@@ -233,7 +293,8 @@ fs.access(projectPath, fs.constants.F_OK, (err) => {
     // Iterate through each checkPath
     for (const pathSegment of checkPathes) {
       const checkPath = `${projectPath}${pathSegment}`;
-      convertTsToJson(checkPath, targetPath);
+      const useIndex = pathSegment !== 'projects';
+      convertTsToJson(checkPath, targetPath, useIndex);
     }
   }
 });

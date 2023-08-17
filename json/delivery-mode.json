@@ -1,7 +1,5 @@
 {
-  "deliveryMode": {
-    "setDeliveryMode": {
-      "unknownError": "An unknown error occurred. Please contact support."
-    }
+  "setDeliveryMode": {
+    "unknownError": "An unknown error occurred. Please contact support."
   }
 }
