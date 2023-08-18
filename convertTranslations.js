@@ -57,6 +57,17 @@ function convertTsToJson(directoryPath, targetPath, useIndexFile) {
                       ),
                     jsonStr
                   );
+                  // enable below code to copy JSON file to Spartcus directory
+                  // e.g it will copy to ~/cart/base/assets/translations/en/cart.i18.json
+                  // fs.writeFileSync(
+                  //   filePath +
+                  //     '/' +
+                  //     replaceFileExtension(
+                  //       translationInfo.importedFileName,
+                  //       'json'
+                  //     ),
+                  //   jsonStr
+                  // );
                 }
                 if (subFile !== 'index.ts' && !useIndexFile) {
                   // console.log(subFile);
