@@ -50,27 +50,17 @@ function convertTsToJson(directoryPath, targetPath, useIndexFile) {
 
                   const jsonStr = JSON.stringify(selectedObject.value, null, 2);
                   fs.writeFileSync(
-                    'json/' +
-                      replaceFileExtension(
-                        translationInfo.importedFileName,
-                        'json'
-                      ),
+                    'json/' + selectedObject.name + '.json',
                     jsonStr
                   );
                   // enable below code to copy JSON file to Spartcus directory
                   // e.g it will copy to ~/cart/base/assets/translations/en/cart.i18.json
                   // fs.writeFileSync(
-                  //   filePath +
-                  //     '/' +
-                  //     replaceFileExtension(
-                  //       translationInfo.importedFileName,
-                  //       'json'
-                  //     ),
+                  //   filePath + '/' + selectedObject.name + '.json',
                   //   jsonStr
                   // );
                 }
                 if (subFile !== 'index.ts' && !useIndexFile) {
-                  // console.log(subFile);
                   const variablesObject = loadObjectsFromFile(
                     filePath + '/' + subFile
                   );
@@ -83,7 +73,7 @@ function convertTsToJson(directoryPath, targetPath, useIndexFile) {
                     );
                     // Write JSON string to a new JSON file
                     fs.writeFileSync(
-                      'json/' + replaceFileExtension(subFile, 'json'),
+                      'json/' + variablesObject[0].name + '.json',
                       jsonStr
                     );
                   }
@@ -124,26 +114,24 @@ function loadObjectsFromFile(filePath) {
     ts.ScriptTarget.ESNext,
     true
   );
-  // check if TS file contains imports
+
   const importStatements = [];
   const orgVariableDeclarations = [];
-  sourceFile.statements.forEach((node) => {
+  // check if TS file contains imports and saving original variables
+  function visitNode(node) {
     if (ts.isImportDeclaration(node)) {
       importStatements.push(node);
+    } else if (ts.isVariableDeclaration(node)) {
+      const variableName = node.name.getText();
+      orgVariableDeclarations.push(variableName);
     }
-  });
+    ts.forEachChild(node, visitNode);
+  }
 
+  visitNode(sourceFile);
+
+  // if import statement exist then get content and merge into original code file
   if (importStatements.length > 0) {
-    // saving original varible declarations before adding imports ones so we can remove imports later
-    function visitforCheck(node) {
-      if (ts.isVariableDeclaration(node)) {
-        const variableName = node.name.getText();
-        orgVariableDeclarations.push(variableName);
-      }
-      ts.forEachChild(node, visitforCheck);
-    }
-    ts.forEachChild(sourceFile, visitforCheck);
-
     const importedFileContents = [];
     const lastSlashIndex = filePath.lastIndexOf('/');
     const rootPath = filePath.substring(0, lastSlashIndex) + '/';
@@ -169,46 +157,19 @@ function loadObjectsFromFile(filePath) {
   }
 
   const objectNodes = [];
-  const variableDependencies = new Map();
-
+  // find/save all variable declarations
   function visit(node) {
     if (ts.isVariableDeclaration(node)) {
       objectNodes.push(node);
-      const dependencies = [];
-      ts.forEachChild(node.initializer, (childNode) => {
-        if (ts.isIdentifier(childNode)) {
-          dependencies.push(childNode.text);
-        }
-      });
-      variableDependencies.set(node.name.getText(), dependencies);
     }
     ts.forEachChild(node, visit);
   }
-
   visit(sourceFile);
-
-  const sortedVariables = [];
-  const visitedVariables = new Set();
-
-  function visitVariable(variable) {
-    if (!visitedVariables.has(variable)) {
-      visitedVariables.add(variable);
-      const dependencies = variableDependencies.get(variable) || [];
-      dependencies.forEach(visitVariable);
-      sortedVariables.push(variable);
-    }
-  }
-
-  // Topological sort to visit variables in the correct order based on dependencies
-  objectNodes.forEach((node) => {
-    visitVariable(node.name.getText());
-  });
 
   // Transpile TypeScript to JavaScript code
   const printer = ts.createPrinter();
-  const jsCode = sortedVariables
-    .map((variable) => {
-      const node = objectNodes.find((node) => node.name.getText() === variable);
+  const jsCode = objectNodes
+    .map((node) => {
       return printer.printNode(ts.EmitHint.Unspecified, node, sourceFile);
     })
     .join('\n');
@@ -216,11 +177,8 @@ function loadObjectsFromFile(filePath) {
   const sandbox = {};
   vm.runInNewContext(jsCode, sandbox, { filename: filePath });
 
-  const resultList =
-    importStatements.length > 0 ? orgVariableDeclarations : sortedVariables;
-
   // Return an array of objects with variable names and their corresponding values
-  return resultList.map((variable) => {
+  return orgVariableDeclarations.map((variable) => {
     const value = sandbox[variable];
     return {
       name: variable,
