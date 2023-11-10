@@ -7,15 +7,10 @@ change the projectPath value in the script line 8 then
 
 node convertTranslations.js
 
-## to use JSON files in Spartacus
+## Options in the script
 
-- enable lines 58 to 61; this action will copy each converted JSON file to the Spartacus folder.
-- update each index.ts file in the folder
-
-  e.g.
-  change
-  import { importExport } from './import-export.i18n';
-  to
-  import importExport from './importExport.json';
-
-  - notes: json file name will be same as the object name (e.g. importExport.json)
+- If "JSON_FOLDER" is defined, it will additionally copy JSON files to this specified location.
+- If CREATE_JSON_FILES is set to true, then create JSON files in a specific location in Spartacus
+- If the variable "UPDATE_IMPORT_FILES" is set to true, the script will update each index.ts file within the translation folder.
+- It will modify the import statements in the index.ts files.
+- If DELETE_TS_FILES is set to true, it will delete the TypeScript translation files after converting them to JSON.
