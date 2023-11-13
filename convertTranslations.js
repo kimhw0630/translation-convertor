@@ -15,7 +15,7 @@ const projectPath =
 // It will modify the import statements in the index.ts files.
 // If DELETE_TS_FILES is set to true, it will delete the TypeScript translation files after converting them to JSON.
 
-const JSON_FOLDER = 'json_develop-next-major'; // create JSON files to given location
+const JSON_FOLDER = 'json_develop-next-major_2'; // create JSON files to given location
 const CREATE_JSON_FILES = true; // create JSON files to Spartacus translation folder
 
 const UPDATE_IMPORT_FILES = true; // update the import statements in the index.ts files
@@ -77,7 +77,6 @@ function convertTsToJson(directoryPath, targetPath) {
                 console.error('Error reading sub-directory:', err);
                 return;
               }
-              let updateProjectIndexFile = false;
               subFiles.forEach(async (subFile) => {
                 if (subFile === 'index.ts') {
                   const indexFilePath = filePath + '/' + subFile;
@@ -102,12 +101,6 @@ function convertTsToJson(directoryPath, targetPath) {
                   updateImportStatement(indexFilePath, translationInfos);
                 }
               });
-              if (updateProjectIndexFile) {
-                const indexFilePath = filePath + '/index.ts';
-                const translationInfos = extractTranslationInfo(indexFilePath);
-                updateImportStatement(indexFilePath, translationInfos);
-                updateProjectIndexFile = false;
-              }
             });
           } else {
             convertTsToJson(filePath, targetPath);
